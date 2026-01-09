@@ -1,68 +1,132 @@
-from direct.showbase import DirectObject
-from panda3d.core import TextNode
-from direct.interval.IntervalGlobal import *
-from direct.gui.DirectGui import *
+"""
+ActionHandler module for SolarSystem application.
+Handles all user input and UI interactions.
+"""
+
 from direct.showbase.DirectObject import DirectObject
+from panda3d.core import TextNode
+from direct.gui.DirectGui import OnscreenText
 import sys
 
+try:
+    from .constants import (
+        MODELS_PATH, DEFAULT_TEXTURES, EASTER_EGG_TEXTURES,
+        UI_TEXT_SCALE, UI_TITLE_SCALE, UI_TEXT_COLOR, PLANET_NAMES
+    )
+except ImportError:
+    from constants import (
+        MODELS_PATH, DEFAULT_TEXTURES, EASTER_EGG_TEXTURES,
+        UI_TEXT_SCALE, UI_TITLE_SCALE, UI_TEXT_COLOR, PLANET_NAMES
+    )
+
+
 class ActionHandler(DirectObject):
-    def genLabelText(self, text, i):
-        return OnscreenText(text=text, pos=(0.06, -.06 * (i + 0.5)), fg=(1, 1, 1, 1),
-                            parent=base.a2dTopLeft,align=TextNode.ALeft, scale=.05)
+    """
+    Handles user input and controls for the solar system simulation.
+
+    Manages keyboard events for:
+    - Pausing/resuming simulation
+    - Speed control
+    - Texture toggling
+    - Planet visibility
+    """
+
+    # Animation keys for each planet (Day rotation, Orbit rotation)
+    PLANET_ANIMATIONS = {
+        "sun": ["sunDay"],
+        "mercury": ["mercuryDay", "mercuryOrbit"],
+        "venus": ["venusDay", "venusOrbit"],
+        "earth": ["earthDay", "earthOrbit"],
+        "moon": ["moonDay", "moonOrbit"],
+        "mars": ["marsDay", "marsOrbit"],
+        "jupiter": ["jupiterDay", "jupiterOrbit"],
+    }
 
     def __init__(self, base, cbAttDic, cbAttTex):
+        """
+        Initialize the ActionHandler.
+
+        Args:
+            base: Panda3D ShowBase instance
+            cbAttDic: Dictionary of celestial body animation intervals
+            cbAttTex: Dictionary of celestial body textures and models
+        """
         DirectObject.__init__(self)
         self.base = base
         self.cbAttDic = cbAttDic
         self.cbAttTex = cbAttTex
 
-        self.instructionText = 0
-        self.spaceKeyEventText = 0
-        self.speedUpText = 0
-        self.slowDownText = 0
-
+        # State variables
         self.simRunning = True
-        self.instruction = True
-        self.origTex = True
+        self.instructionsVisible = True
+        self.usingOriginalTextures = True
 
-        self.instructionText = 0
-        self.spaceKeyEventText = 0
-        self.skeyEventText = 0
-        self.ykeyEventText = 0
-        self.vkeyEventText = 0
-        self.ekeyEventText = 0
-        self.mkeyEventText = 0
-        self.jkeyEventText = 0
-        self.speedUpText = 0
-        self.slowDownText = 0
-        self.toggleTextureText = 0
-        self.resetSolarSystemText = 0
-        self.speedText = 0
+        # UI text elements
+        self._init_ui_elements()
+
+    def _init_ui_elements(self):
+        """Initialize UI text element references to None."""
+        self.instructionText = None
+        self.spaceKeyEventText = None
+        self.speedUpText = None
+        self.slowDownText = None
+        self.toggleTextureText = None
+        self.resetSolarSystemText = None
+        self.easterEggText = None
+        self.speedText = None
+        self.title = None
+
+    def _gen_label_text(self, text, line_number):
+        """
+        Generate a label text at the specified line position.
+
+        Args:
+            text: The text to display
+            line_number: Line number (vertical position)
+
+        Returns:
+            OnscreenText instance
+        """
+        return OnscreenText(
+            text=text,
+            pos=(0.06, -0.06 * (line_number + 0.5)),
+            fg=UI_TEXT_COLOR,
+            parent=base.a2dTopLeft,
+            align=TextNode.ALeft,
+            scale=UI_TEXT_SCALE
+        )
 
     def initAll(self):
-        self.displayLayout()
-        self.displayLayoutAction()
-        self.activateAction()
+        """Initialize all UI elements and activate key bindings."""
+        self._display_title()
+        self._display_instructions()
+        self._activate_key_bindings()
 
-    def displayLayout(self):
+    def _display_title(self):
+        """Display the application title."""
         self.title = OnscreenText(
             text="Fock & Polydor - SolarSystem",
-            parent=base.a2dBottomRight, align=TextNode.A_right,
-            style=1, fg=(1, 1, 1, 1), pos=(-0.1, 0.1), scale=.07)
+            parent=base.a2dBottomRight,
+            align=TextNode.ARight,
+            style=1,
+            fg=UI_TEXT_COLOR,
+            pos=(-0.1, 0.1),
+            scale=UI_TITLE_SCALE
+        )
 
-    def displayLayoutAction(self):
-        self.instructionText = self.genLabelText("[I]: Hide Instructions", 1)
-        self.speedText = self.genLabelText("Speed x 1", 2)
-        self.speedUpText = self.genLabelText("[+]: SPEED UP!", 3)
-        self.slowDownText = self.genLabelText("[-]: slow down...", 4)
-        self.toggleTextureText = self.genLabelText("[T]: Toggle Texture", 5)
-        self.resetSolarSystemText = self.genLabelText("[R]: Reset Solar System", 6)
-        self.easterEggText = self.genLabelText("[X, Y, C, B]: Something Special", 7)
-        self.spaceKeyEventText = self.genLabelText("[SPACE]: Toggle entire Solar System", 8)
+    def _display_instructions(self):
+        """Display all instruction text elements."""
+        self.instructionText = self._gen_label_text("[I]: Hide Instructions", 1)
+        self.speedText = self._gen_label_text("Speed x 1", 2)
+        self.speedUpText = self._gen_label_text("[+]: SPEED UP!", 3)
+        self.slowDownText = self._gen_label_text("[-]: slow down...", 4)
+        self.toggleTextureText = self._gen_label_text("[T]: Toggle Texture", 5)
+        self.resetSolarSystemText = self._gen_label_text("[R]: Reset Solar System", 6)
+        self.easterEggText = self._gen_label_text("[X, Y, C, B, V]: Something Special", 7)
+        self.spaceKeyEventText = self._gen_label_text("[SPACE]: Toggle entire Solar System", 8)
 
-
-
-    def showLayoutAction(self):
+    def _show_instructions(self):
+        """Show all instruction text."""
         self.instructionText.setText("[I]: Hide Instructions")
         self.spaceKeyEventText.setText("[SPACE]: Toggle entire Solar System")
         self.speedUpText.setText("[+]: SPEED UP!")
@@ -70,346 +134,228 @@ class ActionHandler(DirectObject):
         self.toggleTextureText.setText("[T]: Toggle Texture")
         self.resetSolarSystemText.setText("[R]: Reset Solar System")
         self.easterEggText.setText("[X, Y, C, B, V]: Something Special")
-        #self.speedText.setText("Speed x 1.0")
 
-    def hideLayoutAction(self):
-        self.instructionText.setText("")
+    def _hide_instructions(self):
+        """Hide all instruction text except the toggle hint."""
         self.spaceKeyEventText.setText("")
         self.speedUpText.setText("")
         self.slowDownText.setText("")
         self.toggleTextureText.setText("")
         self.resetSolarSystemText.setText("")
         self.easterEggText.setText("")
-        #self.speedText.setText("")
+        self.instructionText.setText("[I]: Show Instructions")
 
-        self.instructionText = self.genLabelText("[I]: Show Instructions", 1)
-
-
-
-    def activateAction(self):
+    def _activate_key_bindings(self):
+        """Set up all keyboard event handlers."""
         self.accept("escape", sys.exit)
-        self.accept("e", self.handleEarth)
-        self.accept("space", self.handleAll)
-        self.accept("+", self.speedUp)
-        self.accept("-", self.slowDown)
-        self.accept("t", self.toggleTex)
-        self.accept("i", self.toggleInstructions)
-        self.accept("r", self.resetSolarSystem)
-        self.accept("z", self.unlimit)
-        self.accept("b", self.borkoTex)
-        self.accept("x", self.teamTex)
-        self.accept("y", self.marmTex)
-        self.accept("c", self.brezinaTex)
-        self.accept("v", self.testbildTex)
+        self.accept("e", self._handle_earth)
+        self.accept("space", self._handle_all)
+        self.accept("+", self._speed_up)
+        self.accept("-", self._slow_down)
+        self.accept("t", self._toggle_texture)
+        self.accept("i", self._toggle_instructions)
+        self.accept("r", self._reset_solar_system)
+        self.accept("z", self._unlimit)
+        self.accept("b", lambda: self._load_easter_egg_texture("borko"))
+        self.accept("x", lambda: self._load_easter_egg_texture("team"))
+        self.accept("y", lambda: self._load_easter_egg_texture("marm"))
+        self.accept("c", lambda: self._load_easter_egg_texture("brezina"))
+        self.accept("v", lambda: self._load_easter_egg_texture("testbild"))
 
-    def unlimit(self):
-        #earth
-        self.cbAttDic["earthOrbit"].setPlayRate(self.cbAttDic["earthOrbit"].getPlayRate()+100)
-        self.cbAttDic["earthDay"].setPlayRate(self.cbAttDic["earthDay"].getPlayRate()+100)
-        #moon
-        self.cbAttDic["moonOrbit"].setPlayRate(self.cbAttDic["moonOrbit"].getPlayRate()+100)
-        self.cbAttDic["moonDay"].setPlayRate(self.cbAttDic["moonDay"].getPlayRate()+100)
-
-    def toggleInstructions(self):
-        if self.instruction == True:
-            print("True")
-            self.hideLayoutAction()
-            self.instruction = False
-        elif self.instruction == False:
-            print("False")
-            self.showLayoutAction()
-            self.instruction = True
-
-    def speedUp(self):
-        print ("SpeedUP")
-
-        if (self.cbAttDic["sunDay"].getPlayRate() == -1):
-            #sun
-            self.cbAttDic["sunDay"].setPlayRate(1)
-            #earth
-            self.cbAttDic["earthOrbit"].setPlayRate(1)
-            self.cbAttDic["earthDay"].setPlayRate(1)
-            #moon
-            self.cbAttDic["moonOrbit"].setPlayRate(1)
-            self.cbAttDic["moonDay"].setPlayRate(1)
-            #mars
-            self.cbAttDic["marsOrbit"].setPlayRate(1)
-            self.cbAttDic["marsDay"].setPlayRate(1)
-            #mercury
-            self.cbAttDic["mercuryOrbit"].setPlayRate(1)
-            self.cbAttDic["mercuryDay"].setPlayRate(1)
-            #jupiter
-            self.cbAttDic["jupiterOrbit"].setPlayRate(1)
-            self.cbAttDic["jupiterDay"].setPlayRate(1)
-            #venus
-            self.cbAttDic["venusOrbit"].setPlayRate(1)
-            self.cbAttDic["venusDay"].setPlayRate(1)
+    def _toggle_instructions(self):
+        """Toggle visibility of instruction text."""
+        if self.instructionsVisible:
+            self._hide_instructions()
+            self.instructionsVisible = False
         else:
-            #sun
-            self.cbAttDic["sunDay"].setPlayRate(self.cbAttDic["sunDay"].getPlayRate()+1)
-            #earth
-            self.cbAttDic["earthOrbit"].setPlayRate(self.cbAttDic["earthOrbit"].getPlayRate()+1)
-            self.cbAttDic["earthDay"].setPlayRate(self.cbAttDic["earthDay"].getPlayRate()+1)
-            #moon
-            self.cbAttDic["moonOrbit"].setPlayRate(self.cbAttDic["moonOrbit"].getPlayRate()+1)
-            self.cbAttDic["moonDay"].setPlayRate(self.cbAttDic["moonDay"].getPlayRate()+1)
-            #mars
-            self.cbAttDic["marsOrbit"].setPlayRate(self.cbAttDic["marsOrbit"].getPlayRate()+1)
-            self.cbAttDic["marsDay"].setPlayRate(self.cbAttDic["marsDay"].getPlayRate()+1)
-            #mercury
-            self.cbAttDic["mercuryOrbit"].setPlayRate(self.cbAttDic["mercuryOrbit"].getPlayRate()+1)
-            self.cbAttDic["mercuryDay"].setPlayRate(self.cbAttDic["mercuryDay"].getPlayRate()+1)
-            #jupiter
-            self.cbAttDic["jupiterOrbit"].setPlayRate(self.cbAttDic["jupiterOrbit"].getPlayRate()+1)
-            self.cbAttDic["jupiterDay"].setPlayRate(self.cbAttDic["jupiterDay"].getPlayRate()+1)
-            #venus
-            self.cbAttDic["venusOrbit"].setPlayRate(self.cbAttDic["venusOrbit"].getPlayRate()+1)
-            self.cbAttDic["venusDay"].setPlayRate(self.cbAttDic["venusDay"].getPlayRate()+1)
+            self._show_instructions()
+            self.instructionsVisible = True
 
+    def _set_all_play_rates(self, rate):
+        """
+        Set play rate for all animation intervals.
 
+        Args:
+            rate: The play rate to set (1.0 = normal, 0 = stopped, negative = reverse)
+        """
+        for planet, anim_keys in self.PLANET_ANIMATIONS.items():
+            for key in anim_keys:
+                if key in self.cbAttDic:
+                    self.cbAttDic[key].setPlayRate(rate)
 
-        self.speedText.setText("Speed x %s" % self.cbAttDic["sunDay"].getPlayRate())
-        print (self.cbAttDic["sunDay"].getPlayRate())
+    def _adjust_all_play_rates(self, delta):
+        """
+        Adjust play rate for all animation intervals by a delta value.
 
+        Args:
+            delta: Amount to add to current play rate (positive or negative)
+        """
+        for planet, anim_keys in self.PLANET_ANIMATIONS.items():
+            for key in anim_keys:
+                if key in self.cbAttDic:
+                    current_rate = self.cbAttDic[key].getPlayRate()
+                    self.cbAttDic[key].setPlayRate(current_rate + delta)
 
-    def slowDown(self):
-        print ("SlowDown")
-        if (self.cbAttDic["sunDay"].getPlayRate() == 1):
-            #sun
-            self.cbAttDic["sunDay"].setPlayRate(-1)
-            #earth
-            self.cbAttDic["earthOrbit"].setPlayRate(-1)
-            self.cbAttDic["earthDay"].setPlayRate(-1)
-            #moon
-            self.cbAttDic["moonOrbit"].setPlayRate(-1)
-            self.cbAttDic["moonDay"].setPlayRate(-1)
-            #mars
-            self.cbAttDic["marsOrbit"].setPlayRate(-1)
-            self.cbAttDic["marsDay"].setPlayRate(-1)
-            #mercury
-            self.cbAttDic["mercuryOrbit"].setPlayRate(-1)
-            self.cbAttDic["mercuryDay"].setPlayRate(-1)
-            #jupiter
-            self.cbAttDic["jupiterOrbit"].setPlayRate(-1)
-            self.cbAttDic["jupiterDay"].setPlayRate(-1)
-            #venus
-            self.cbAttDic["venusOrbit"].setPlayRate(-1)
-            self.cbAttDic["venusDay"].setPlayRate(-1)
+    def _get_current_speed(self):
+        """Get the current simulation speed from sun's day rotation."""
+        return self.cbAttDic["sunDay"].getPlayRate()
+
+    def _update_speed_display(self):
+        """Update the speed display text."""
+        speed = self._get_current_speed()
+        self.speedText.setText(f"Speed x {speed}")
+
+    def _speed_up(self):
+        """Increase simulation speed."""
+        current_speed = self._get_current_speed()
+
+        # If at -1 (reversing slowly), jump to 1 (normal speed)
+        if current_speed == -1:
+            self._set_all_play_rates(1)
         else:
-            #sun
-            self.cbAttDic["sunDay"].setPlayRate(self.cbAttDic["sunDay"].getPlayRate()-1)
-            #earth
-            self.cbAttDic["earthOrbit"].setPlayRate(self.cbAttDic["earthOrbit"].getPlayRate()-1)
-            self.cbAttDic["earthDay"].setPlayRate(self.cbAttDic["earthDay"].getPlayRate()-1)
-            #moon
-            self.cbAttDic["moonOrbit"].setPlayRate(self.cbAttDic["moonOrbit"].getPlayRate()-1)
-            self.cbAttDic["moonDay"].setPlayRate(self.cbAttDic["moonDay"].getPlayRate()-1)
-            #mars
-            self.cbAttDic["marsOrbit"].setPlayRate(self.cbAttDic["marsOrbit"].getPlayRate()-1)
-            self.cbAttDic["marsDay"].setPlayRate(self.cbAttDic["marsDay"].getPlayRate()-1)
-            #mercury
-            self.cbAttDic["mercuryOrbit"].setPlayRate(self.cbAttDic["mercuryOrbit"].getPlayRate()-1)
-            self.cbAttDic["mercuryDay"].setPlayRate(self.cbAttDic["mercuryDay"].getPlayRate()-1)
-            #jupiter
-            self.cbAttDic["jupiterOrbit"].setPlayRate(self.cbAttDic["jupiterOrbit"].getPlayRate()-1)
-            self.cbAttDic["jupiterDay"].setPlayRate(self.cbAttDic["jupiterDay"].getPlayRate()-1)
-            #venus
-            self.cbAttDic["venusOrbit"].setPlayRate(self.cbAttDic["venusOrbit"].getPlayRate()-1)
-            self.cbAttDic["venusDay"].setPlayRate(self.cbAttDic["venusDay"].getPlayRate()-1)
+            self._adjust_all_play_rates(1)
 
-        print (self.cbAttDic["sunDay"].getPlayRate())
-        self.speedText.setText("Speed x %s" % self.cbAttDic["sunDay"].getPlayRate())
+        self._update_speed_display()
 
-    def handleEarth(self):
-        self.togglePlanet("Earth", self.cbAttDic["earthDay"],
-                          self.cbAttDic["earthOrbit"], self.ekeyEventText)
-        self.togglePlanet("Moon", self.cbAttDic["moonDay"],
-                          self.cbAttDic["moonOrbit"])
-    # end handleEarth
+    def _slow_down(self):
+        """Decrease simulation speed."""
+        current_speed = self._get_current_speed()
 
+        # If at 1 (normal speed), jump to -1 (reverse)
+        if current_speed == 1:
+            self._set_all_play_rates(-1)
+        else:
+            self._adjust_all_play_rates(-1)
 
-    def handleAll(self):
-        # When the mouse is clicked, if the simulation is running pause all the
-        # planets and sun, otherwise resume it
+        self._update_speed_display()
+
+    def _unlimit(self):
+        """Dramatically increase Earth and Moon speed (hidden feature)."""
+        earth_moon_keys = ["earthOrbit", "earthDay", "moonOrbit", "moonDay"]
+        for key in earth_moon_keys:
+            if key in self.cbAttDic:
+                current_rate = self.cbAttDic[key].getPlayRate()
+                self.cbAttDic[key].setPlayRate(current_rate + 100)
+
+    def _reset_solar_system(self):
+        """Reset simulation to stopped state."""
+        self._set_all_play_rates(0)
+        self._update_speed_display()
+
+    def _handle_earth(self):
+        """Toggle Earth and Moon animation."""
+        self._toggle_planet("earth", ["earthDay", "earthOrbit"])
+        self._toggle_planet("moon", ["moonDay", "moonOrbit"])
+
+    def _handle_all(self):
+        """Toggle all planets' animation (pause/resume entire simulation)."""
         if self.simRunning:
-            print("Pausing Simulation")
-            # For each planet, check if it is moving and if so, pause it
-            # Sun
-            if self.cbAttDic["sunDay"].isPlaying():
-                self.togglePlanet("Sun", self.cbAttDic["sunDay"], None,
-                                  self.skeyEventText)
-            if self.cbAttDic["mercuryDay"].isPlaying():
-                self.togglePlanet("Mercury", self.cbAttDic["mercuryDay"],
-                                  self.cbAttDic["mercuryOrbit"], self.ykeyEventText)
-            # Venus
-            if self.cbAttDic["venusDay"].isPlaying():
-                self.togglePlanet("Venus", self.cbAttDic["venusDay"],
-                                  self.cbAttDic["venusOrbit"], self.vkeyEventText)
-            #Earth and moon
-            if self.cbAttDic["earthDay"].isPlaying():
-                self.togglePlanet("Earth", self.cbAttDic["earthDay"],
-                                  self.cbAttDic["earthOrbit"], self.ekeyEventText)
-                self.togglePlanet("Moon", self.cbAttDic["moonDay"],
-                                  self.cbAttDic["moonOrbit"])
-            # Mars
-            if self.cbAttDic["marsDay"].isPlaying():
-                self.togglePlanet("Mars", self.cbAttDic["marsDay"],
-                                  self.cbAttDic["marsOrbit"], self.mkeyEventText)
-            # jupiter
-            if self.cbAttDic["jupiterDay"].isPlaying():
-                self.togglePlanet("jupiter", self.cbAttDic["jupiterDay"],
-                                  self.cbAttDic["jupiterOrbit"], self.jkeyEventText)
+            # Pause all running animations
+            for planet, anim_keys in self.PLANET_ANIMATIONS.items():
+                day_key = anim_keys[0]  # Day rotation is always first
+                if day_key in self.cbAttDic and self.cbAttDic[day_key].isPlaying():
+                    self._toggle_planet(planet, anim_keys)
         else:
-            #"The simulation is paused, so resume it
-            print("Resuming Simulation")
-            # the not operator does the reverse of the previous code
-            if not self.cbAttDic["sunDay"].isPlaying():
-                self.togglePlanet("Sun", self.cbAttDic["sunDay"], None,
-                                  self.skeyEventText)
-            if not self.cbAttDic["mercuryDay"].isPlaying():
-                self.togglePlanet("Mercury", self.cbAttDic["mercuryDay"],
-                                  self.cbAttDic["mercuryOrbit"], self.ykeyEventText)
-            if not self.cbAttDic["venusDay"].isPlaying():
-                self.togglePlanet("Venus", self.cbAttDic["venusDay"],
-                                  self.cbAttDic["venusOrbit"], self.vkeyEventText)
-            if not self.cbAttDic["earthDay"].isPlaying():
-                self.togglePlanet("Earth", self.cbAttDic["earthDay"],
-                                  self.cbAttDic["earthOrbit"], self.ekeyEventText)
-                self.togglePlanet("Moon", self.cbAttDic["moonDay"],
-                                  self.cbAttDic["moonOrbit"])
-            if not self.cbAttDic["marsDay"].isPlaying():
-                self.togglePlanet("Mars", self.cbAttDic["marsDay"],
-                                  self.cbAttDic["marsOrbit"], self.mkeyEventText)
-            if not self.cbAttDic["jupiterDay"].isPlaying():
-                self.togglePlanet("jupiter", self.cbAttDic["jupiterDay"],
-                                  self.cbAttDic["jupiterOrbit"], self.mkeyEventText)
-        # toggle self.simRunning
+            # Resume all paused animations
+            for planet, anim_keys in self.PLANET_ANIMATIONS.items():
+                day_key = anim_keys[0]
+                if day_key in self.cbAttDic and not self.cbAttDic[day_key].isPlaying():
+                    self._toggle_planet(planet, anim_keys)
+
         self.simRunning = not self.simRunning
-    # end handleMouseClick
 
-    def togglePlanet(self, planet, day, orbit=None, text=None):
-        # toggle the day interval
-        self.toggleInterval(day)
-        # if there is an orbit interval, toggle it
-        if orbit:
-            self.toggleInterval(orbit)
-    # end togglePlanet
+    def _toggle_planet(self, planet_name, anim_keys):
+        """
+        Toggle animation for a specific planet.
 
-    def toggleInterval(self, interval):
+        Args:
+            planet_name: Name of the planet
+            anim_keys: List of animation keys to toggle
+        """
+        for key in anim_keys:
+            if key in self.cbAttDic:
+                self._toggle_interval(self.cbAttDic[key])
+
+    def _toggle_interval(self, interval):
+        """
+        Toggle an animation interval between playing and paused.
+
+        Args:
+            interval: The Panda3D interval to toggle
+        """
         if interval.isPlaying():
             interval.pause()
         else:
             interval.resume()
-    # end toggleInterval
 
-    def toggleTex(self):
-        if (self.origTex == True):
-            self.origTex = False
-            self.loadTex("weiss")
-
+    def _toggle_texture(self):
+        """Toggle between original and alternate (white) textures."""
+        if self.usingOriginalTextures:
+            self._load_texture_for_all("weiss")
+            self.usingOriginalTextures = False
         else:
-            self.origTex = True
-            self.resumeToNormalTex()
+            self._restore_original_textures()
+            self.usingOriginalTextures = True
 
-    def testbildTex(self):
-            self.origTex = False
-            self.loadTex("testbild")
+    def _load_easter_egg_texture(self, texture_name):
+        """
+        Load an easter egg texture for all planets.
 
-    def borkoTex(self):
-            self.origTex = False
-            self.loadTex("borko")
+        Args:
+            texture_name: Name of the easter egg texture (without extension)
+        """
+        self.usingOriginalTextures = False
+        self._load_texture_for_all(texture_name)
 
-    def brezinaTex(self):
-            self.origTex = False
-            self.loadTex("brezina")
+    def _load_texture_for_all(self, texture_name):
+        """
+        Load the same texture for all celestial bodies.
 
-    def teamTex(self):
-            self.origTex = False
-            self.loadTex("team")
+        Args:
+            texture_name: Name of the texture file (without .jpg extension)
+        """
+        texture_path = f"{MODELS_PATH}{texture_name}.jpg"
 
-    def marmTex(self):
-            self.origTex = False
-            self.loadTex("marm")
+        for planet in PLANET_NAMES:
+            tex_key = f"{planet}Tex"
+            if planet in self.cbAttTex:
+                try:
+                    new_tex = loader.loadTexture(texture_path)
+                    self.cbAttTex[tex_key] = new_tex
+                    self.cbAttTex[planet].setTexture(new_tex, 1)
+                except Exception as e:
+                    print(f"Warning: Could not load texture {texture_path}: {e}")
 
-    def loadTex(self, str):
-        # toggle sun
-            self.cbAttTex["sunTex"] = loader.loadTexture("../../models/%s.jpg" % str)
-            self.cbAttTex["sun"].setTexture(self.cbAttTex["sunTex"], 1)
+    def _restore_original_textures(self):
+        """Restore the original textures for all celestial bodies."""
+        for planet, texture_file in DEFAULT_TEXTURES.items():
+            tex_key = f"{planet}Tex"
+            texture_path = f"{MODELS_PATH}{texture_file}"
 
-            # toggle earth
-            self.cbAttTex["earthTex"] = loader.loadTexture("../../models/%s.jpg" % str)
-            self.cbAttTex["earth"].setTexture(self.cbAttTex["earthTex"], 1)
+            if planet in self.cbAttTex:
+                try:
+                    new_tex = loader.loadTexture(texture_path)
+                    self.cbAttTex[tex_key] = new_tex
+                    self.cbAttTex[planet].setTexture(new_tex, 1)
+                except Exception as e:
+                    print(f"Warning: Could not load texture {texture_path}: {e}")
 
-            # toggle moon
-            self.cbAttTex["moonTex"] = loader.loadTexture("../../models/%s.jpg" % str)
-            self.cbAttTex["moon"].setTexture(self.cbAttTex["moonTex"], 1)
 
-            # toggle mars
-            self.cbAttTex["marsTex"] = loader.loadTexture("../../models/%s.jpg" % str)
-            self.cbAttTex["mars"].setTexture(self.cbAttTex["marsTex"], 1)
-
-            # toggle mercury
-            self.cbAttTex["mercuryTex"] = loader.loadTexture("../../models/%s.jpg" % str)
-            self.cbAttTex["mercury"].setTexture(self.cbAttTex["mercuryTex"], 1)
-
-            # toggle venus
-            self.cbAttTex["venusTex"] = loader.loadTexture("../../models/%s.jpg" % str)
-            self.cbAttTex["venus"].setTexture(self.cbAttTex["venusTex"], 1)
-
-            # toggle jupiter
-            self.cbAttTex["jupiterTex"] = loader.loadTexture("../../models/%s.jpg" % str)
-            self.cbAttTex["jupiter"].setTexture(self.cbAttTex["jupiterTex"], 1)
-
-    def resumeToNormalTex(self):
-        # toggle sun
-            self.cbAttTex["sunTex"] = loader.loadTexture("../../models/sun_1k_tex.jpg")
-            self.cbAttTex["sun"].setTexture(self.cbAttTex["sunTex"], 1)
-
-            # toggle earth
-            self.cbAttTex["earthTex"] = loader.loadTexture("../../models/earth_1k_tex.jpg")
-            self.cbAttTex["earth"].setTexture(self.cbAttTex["earthTex"], 1)
-
-           # toggle moon
-            self.cbAttTex["moonTex"] = loader.loadTexture("../../models/moon_1k_tex.jpg")
-            self.cbAttTex["moon"].setTexture(self.cbAttTex["moonTex"], 1)
-
-           # toggle mars
-            self.cbAttTex["marsTex"] = loader.loadTexture("../../models/mars_1k_tex.jpg")
-            self.cbAttTex["mars"].setTexture(self.cbAttTex["marsTex"], 1)
-
-           # toggle mercury
-            self.cbAttTex["mercuryTex"] = loader.loadTexture("../../models/mercury_1k_tex.jpg")
-            self.cbAttTex["mercury"].setTexture(self.cbAttTex["mercuryTex"], 1)
-
-           # toggle jupiter
-            self.cbAttTex["jupiterTex"] = loader.loadTexture("../../models/jupiter.jpg")
-            self.cbAttTex["jupiter"].setTexture(self.cbAttTex["jupiterTex"], 1)
-
-           # toggle venus
-            self.cbAttTex["venusTex"] = loader.loadTexture("../../models/venus_1k_tex.jpg")
-            self.cbAttTex["venus"].setTexture(self.cbAttTex["venusTex"], 1)
-
-    def resetSolarSystem(self):
-        #sun
-        self.cbAttDic["sunDay"].setPlayRate(0)
-        #earth
-        self.cbAttDic["earthOrbit"].setPlayRate(0)
-        self.cbAttDic["earthDay"].setPlayRate(0)
-        #moon
-        self.cbAttDic["moonOrbit"].setPlayRate(0)
-        self.cbAttDic["moonDay"].setPlayRate(0)
-        #mars
-        self.cbAttDic["marsOrbit"].setPlayRate(0)
-        self.cbAttDic["marsDay"].setPlayRate(0)
-        #mercury
-        self.cbAttDic["mercuryOrbit"].setPlayRate(0)
-        self.cbAttDic["mercuryDay"].setPlayRate(0)
-        #jupiter
-        self.cbAttDic["jupiterOrbit"].setPlayRate(0)
-        self.cbAttDic["jupiterDay"].setPlayRate(0)
-        #venus
-        self.cbAttDic["venusOrbit"].setPlayRate(0)
-        self.cbAttDic["venusDay"].setPlayRate(0)
-
-        self.speedText.setText("Speed x %s" % self.cbAttDic["sunDay"].getPlayRate())
-
+# Backwards compatibility aliases
+ActionHandler.genLabelText = ActionHandler._gen_label_text
+ActionHandler.displayLayout = ActionHandler._display_title
+ActionHandler.displayLayoutAction = ActionHandler._display_instructions
+ActionHandler.showLayoutAction = ActionHandler._show_instructions
+ActionHandler.hideLayoutAction = ActionHandler._hide_instructions
+ActionHandler.activateAction = ActionHandler._activate_key_bindings
+ActionHandler.speedUp = ActionHandler._speed_up
+ActionHandler.slowDown = ActionHandler._slow_down
+ActionHandler.handleEarth = ActionHandler._handle_earth
+ActionHandler.handleAll = ActionHandler._handle_all
+ActionHandler.togglePlanet = ActionHandler._toggle_planet
+ActionHandler.toggleInterval = ActionHandler._toggle_interval
+ActionHandler.toggleTex = ActionHandler._toggle_texture
+ActionHandler.loadTex = ActionHandler._load_texture_for_all
+ActionHandler.resumeToNormalTex = ActionHandler._restore_original_textures
+ActionHandler.resetSolarSystem = ActionHandler._reset_solar_system
+ActionHandler.toggleInstructions = ActionHandler._toggle_instructions

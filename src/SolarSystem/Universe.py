@@ -1,80 +1,83 @@
-from direct.showbase.ShowBase import ShowBase
+"""
+Universe module for SolarSystem application.
+Handles environment setup including lighting and skybox.
+"""
 
-from panda3d.core import *  # Contains most of Panda's modules
-from direct.gui.DirectGui import *  # Imports Gui objects we use for putting
-# text on the screen
 import sys
+from panda3d.core import PointLight, VBase4
+
+try:
+    from .constants import (
+        POINT_LIGHT_COLOR, POINT_LIGHT_POSITIONS, SKYBOX_SCALE,
+        BACKGROUND_COLOR, MODELS_PATH, SKYBOX_MODEL, STARS_TEXTURE
+    )
+except ImportError:
+    from constants import (
+        POINT_LIGHT_COLOR, POINT_LIGHT_POSITIONS, SKYBOX_SCALE,
+        BACKGROUND_COLOR, MODELS_PATH, SKYBOX_MODEL, STARS_TEXTURE
+    )
 
 
-class Universe(object):
-    '''
-        Klasse Universe
-    '''
+class Universe:
+    """
+    Creates and manages the space environment.
+
+    Handles:
+    - Point lighting from multiple directions
+    - Skybox with star texture
+    - Background color
+    """
+
     def __init__(self, base):
-        '''
-        Klasse Konstruktor
+        """
+        Initialize the Universe.
 
-        :param base: ShowBase from direct.showbase.ShowBase
-
-        :return:
-        '''
+        Args:
+            base: Panda3D ShowBase instance
+        """
         self.base = base
-        self.initPointLight()
+        self.sky = None
+        self.sky_tex = None
+        self.lights = []
 
+        self._init_point_lights()
 
-    def initPointLight(self):
-        plight = PointLight('plight')
-        plight.setColor(VBase4(0.8, 0.8, 0.8, 1))
-        plnp = render.attachNewNode(plight)
-        plnp.setPos(0, 0, 3.8)
-        render.setLight(plnp)
+    def _init_point_lights(self):
+        """Set up point lights around the origin for ambient illumination."""
+        for i, position in enumerate(POINT_LIGHT_POSITIONS):
+            light = PointLight(f'plight_{i}')
+            light.setColor(POINT_LIGHT_COLOR)
 
+            light_node = render.attachNewNode(light)
+            light_node.setPos(*position)
+            render.setLight(light_node)
 
-        plight2 = PointLight('plight')
-        plight2.setColor(VBase4(0.8, 0.8, 0.8, 1))
-        plnp2 = render.attachNewNode(plight2)
-        plnp2.setPos(0, 0, -3.8)
-        render.setLight(plnp2)
+            self.lights.append(light_node)
 
-        plight3 = PointLight('plight')
-        plight3.setColor(VBase4(0.8, 0.8, 0.8, 1))
-        plnp3 = render.attachNewNode(plight3)
-        plnp3.setPos(3.8, 0, 0)
-        render.setLight(plnp3)
-
-        plight4 = PointLight('plight')
-        plight4.setColor(VBase4(0.8, 0.8, 0.8, 1))
-        plnp4 = render.attachNewNode(plight4)
-        plnp4.setPos(-3.8, 0, 0)
-        render.setLight(plnp4)
-
-        plight5 = PointLight('plight')
-        plight5.setColor(VBase4(0.8, 0.8, 0.8, 1))
-        plnp5 = render.attachNewNode(plight5)
-        plnp5.setPos(0, -3.8, 0)
-        render.setLight(plnp5)
-
-        plight6 = PointLight('plight')
-        plight6.setColor(VBase4(0.8, 0.8, 0.8, 1))
-        plnp6 = render.attachNewNode(plight6)
-        plnp6.setPos(0, 3.8, 0)
-        render.setLight(plnp6)
-        #render.setShaderAuto()
-        base.setBackgroundColor(0, 0, 0)
+        # Set background color and camera look-at
+        base.setBackgroundColor(*BACKGROUND_COLOR)
         base.cam.lookAt(0, 0, 0)
 
     def initSky(self):
-        # Load the model for the sky
-        self.sky = loader.loadModel("../../models/solar_sky_sphere")
-        # Load the texture for the sky.
-        self.sky_tex = loader.loadTexture("../../models/stars_1k_tex.jpg")
-        # Set the sky texture to the sky model
+        """Load and set up the skybox with star texture."""
+        model_path = f"{MODELS_PATH}{SKYBOX_MODEL}"
+        texture_path = f"{MODELS_PATH}{STARS_TEXTURE}"
+
+        try:
+            self.sky = loader.loadModel(model_path)
+        except Exception as e:
+            print(f"Error: Could not load skybox model: {e}")
+            sys.exit(1)
+
+        try:
+            self.sky_tex = loader.loadTexture(texture_path)
+        except Exception as e:
+            print(f"Error: Could not load sky texture: {e}")
+            sys.exit(1)
+
         self.sky.setTexture(self.sky_tex, 1)
-        # Parent the sky model to the render node so that the sky is rendered
         self.sky.reparentTo(render)
-        # Scale the size of the sky.
-        self.sky.setScale(40)
+        self.sky.setScale(SKYBOX_SCALE)
 
-
-
-
+    # Legacy method alias
+    initPointLight = _init_point_lights
