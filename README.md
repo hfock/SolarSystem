@@ -43,6 +43,81 @@ SolarSystem is an educational and interactive 3D visualization of our solar syst
    - Planet textures (`.jpg` files)
    - Particle effect configuration (`fireish.ptf`)
 
+## Docker Installation (Alternative)
+
+The application can also be run using Docker, which simplifies dependency management and ensures consistent environments across different systems.
+
+### Prerequisites
+
+- Docker installed on your system
+- Docker Compose (usually included with Docker Desktop)
+- X11 server for GUI display (on Linux, usually pre-installed)
+
+### Running with Docker Compose (Recommended)
+
+1. Clone this repository:
+   ```bash
+   git clone <repository-url>
+   cd SolarSystem
+   ```
+
+2. Allow Docker to access your display (Linux only):
+   ```bash
+   xhost +local:docker
+   ```
+
+3. Start the application:
+   ```bash
+   docker-compose up
+   ```
+
+4. To stop the application, press `Ctrl+C` or run:
+   ```bash
+   docker-compose down
+   ```
+
+### Running with Docker (Without Compose)
+
+1. Build the Docker image:
+   ```bash
+   docker build -t solarsystem .
+   ```
+
+2. Allow Docker to access your display (Linux only):
+   ```bash
+   xhost +local:docker
+   ```
+
+3. Run the container:
+   ```bash
+   docker run --rm -it \
+     -e DISPLAY=$DISPLAY \
+     -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+     --network host \
+     solarsystem
+   ```
+
+### Docker on macOS/Windows
+
+For macOS and Windows users, you'll need to set up an X11 server:
+
+**macOS:**
+1. Install XQuartz: `brew install --cask xquartz`
+2. Start XQuartz and enable "Allow connections from network clients" in Preferences
+3. Run: `xhost + 127.0.0.1`
+4. Set DISPLAY: `export DISPLAY=host.docker.internal:0`
+
+**Windows:**
+1. Install VcXsrv or Xming
+2. Start the X server with "Disable access control" enabled
+3. Set DISPLAY in docker-compose.yml to your Windows IP address
+
+### Troubleshooting Docker
+
+- **Black screen or no display**: Ensure `xhost +local:docker` was run before starting
+- **Permission denied errors**: Check X11 socket permissions in `/tmp/.X11-unix`
+- **Application crashes on startup**: Verify all model files are present in the `models/` directory
+
 ## Usage
 
 Run the application from the project root:
