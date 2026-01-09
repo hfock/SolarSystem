@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install system dependencies for Panda3D and OpenGL
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglu1-mesa \
     libx11-6 \
     libxext6 \
