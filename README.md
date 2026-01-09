@@ -26,6 +26,8 @@ SolarSystem is an educational and interactive 3D visualization of our solar syst
 
 ## Installation
 
+### Standard Installation
+
 1. Clone this repository:
    ```bash
    git clone <repository-url>
@@ -42,6 +44,78 @@ SolarSystem is an educational and interactive 3D visualization of our solar syst
    - Skybox model (`solar_sky_sphere`)
    - Planet textures (`.jpg` files)
    - Particle effect configuration (`fireish.ptf`)
+
+### Virtual Environment Installation (Recommended)
+
+Using a virtual environment is recommended to avoid dependency conflicts with other Python projects.
+
+**Linux/macOS:**
+
+1. Clone this repository:
+   ```bash
+   git clone <repository-url>
+   cd SolarSystem
+   ```
+
+2. Create a virtual environment:
+   ```bash
+   python3 -m venv venv
+   ```
+
+3. Activate the virtual environment:
+   ```bash
+   source venv/bin/activate
+   ```
+
+4. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Run the application:
+   ```bash
+   python -m src.SolarSystem.Main
+   ```
+
+6. When finished, deactivate the virtual environment:
+   ```bash
+   deactivate
+   ```
+
+**Windows:**
+
+1. Clone this repository:
+   ```bash
+   git clone <repository-url>
+   cd SolarSystem
+   ```
+
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   ```
+
+3. Activate the virtual environment:
+   ```bash
+   venv\Scripts\activate
+   ```
+
+4. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Run the application:
+   ```bash
+   python -m src.SolarSystem.Main
+   ```
+
+6. When finished, deactivate the virtual environment:
+   ```bash
+   deactivate
+   ```
+
+**Note:** After the initial setup, you only need to activate the virtual environment (step 3) before running the application. The virtual environment preserves your installed dependencies between sessions.
 
 ## Docker Installation (Alternative)
 
