@@ -2,7 +2,7 @@
 
 A 3D interactive solar system simulator built with Panda3D.
 
-**Authors:** Fock & Polydor
+**Authors:** Fock
 
 ## Overview
 
