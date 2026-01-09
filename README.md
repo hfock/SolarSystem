@@ -106,17 +106,21 @@ For macOS and Windows users, you'll need to set up an X11 server:
 2. Start XQuartz application (via Spotlight or Applications folder)
 3. In XQuartz Preferences → Security, enable "Allow connections from network clients"
 4. Restart XQuartz for the changes to take effect
-5. Open a terminal and allow localhost access:
+5. Open a terminal and allow X11 connections:
    ```bash
-   xhost + 127.0.0.1
+   xhost +
    ```
-6. Update the DISPLAY variable in `docker-compose.yml` or set it before running docker:
+   **Note:** If `xhost` shows "unable to open display", XQuartz is not running yet. Make sure you see the XQuartz icon in your menu bar.
+
+6. Start the application using the macOS-specific compose file:
    ```bash
-   export DISPLAY=host.docker.internal:0
-   docker-compose up
+   docker-compose -f docker-compose.mac.yml up
    ```
 
-   **Note:** If `xhost` shows "unable to open display", make sure XQuartz is running first!
+   Alternatively, set DISPLAY manually with the regular compose file:
+   ```bash
+   DISPLAY=host.docker.internal:0 docker-compose up
+   ```
 
 **Windows:**
 1. Install VcXsrv or Xming
