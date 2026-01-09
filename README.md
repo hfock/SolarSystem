@@ -129,9 +129,45 @@ For macOS and Windows users, you'll need to set up an X11 server:
 
 ### Troubleshooting Docker
 
+**Linux Issues:**
 - **Black screen or no display**: Ensure `xhost +local:docker` was run before starting
 - **Permission denied errors**: Check X11 socket permissions in `/tmp/.X11-unix`
 - **Application crashes on startup**: Verify all model files are present in the `models/` directory
+
+**macOS XQuartz Issues:**
+
+If you see "Authorization required, but no authorization protocol specified":
+
+1. **Completely quit XQuartz** (Cmd+Q or XQuartz menu → Quit)
+2. **Open XQuartz Preferences** and verify:
+   - Go to Security tab
+   - Check "Allow connections from network clients"
+   - Close Preferences
+3. **Restart XQuartz** for changes to take effect:
+   ```bash
+   open -a XQuartz
+   ```
+4. **Wait for XQuartz to fully start** (icon appears in menu bar)
+5. **In your terminal, set DISPLAY and allow connections**:
+   ```bash
+   export DISPLAY=:0
+   xhost +localhost
+   ```
+   Note: You should see "localhost being added to access control list"
+6. **Now run Docker Compose**:
+   ```bash
+   docker-compose -f docker-compose.mac.yml up
+   ```
+
+If `xhost` shows "unable to open display":
+- XQuartz is not running or not fully started yet
+- Make sure you can see the XQuartz icon in your menu bar
+- Try setting `DISPLAY=:0` before running `xhost`
+
+Common mistakes:
+- Running `xhost +` without setting `DISPLAY=:0` first (this causes "unable to open display")
+- Not restarting XQuartz after enabling "Allow connections from network clients"
+- Setting `DISPLAY=host.docker.internal:0` in the terminal before running xhost (this is for Docker, not for your local xhost command)
 
 ## Usage
 
