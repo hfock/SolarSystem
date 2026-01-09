@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  solarsystem:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: solarsystem-app
+    environment:
+      # Display variable for macOS with XQuartz
+      - DISPLAY=host.docker.internal:0
+    volumes:
+      # Mount source code for development (optional, comment out for production)
+      - ./src:/app/src
+      # Mount models directory
+      - ./models:/app/models
+    stdin_open: true
+    tty: true
+    # Note: Before starting, run in your terminal:
+    # 1. open -a XQuartz
+    # 2. In XQuartz Preferences > Security, enable "Allow connections from network clients"
+    # 3. xhost + (to allow X11 connections)
