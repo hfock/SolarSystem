@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  solarsystem:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: solarsystem-app
+    environment:
+      # Display variable for X11 forwarding
+      - DISPLAY=${DISPLAY:-:0}
+    volumes:
+      # Mount X11 socket for GUI display
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Mount source code for development (optional, comment out for production)
+      - ./src:/app/src
+      # Mount models directory
+      - ./models:/app/models
+    network_mode: host
+    stdin_open: true
+    tty: true
+    # Grant X11 access (required for GUI applications)
+    # Note: On Linux, you may need to run 'xhost +local:docker' before starting
