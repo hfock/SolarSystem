@@ -9,6 +9,8 @@ services:
     environment:
       # Display variable for macOS with XQuartz
       - DISPLAY=host.docker.internal:0
+      # Force software rendering for XQuartz compatibility (hardware GLX not available)
+      - LIBGL_ALWAYS_SOFTWARE=1
     volumes:
       # Mount source code for development (optional, comment out for production)
       - ./src:/app/src

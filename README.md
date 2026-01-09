@@ -99,28 +99,43 @@ The application can also be run using Docker, which simplifies dependency manage
 
 ### Docker on macOS/Windows
 
-For macOS and Windows users, you'll need to set up an X11 server:
+**⚠️ macOS Users: Native Installation Recommended**
 
-**macOS:**
+While Docker works on macOS, **running natively provides better performance** since XQuartz has limited OpenGL support. Docker will use software rendering which is significantly slower.
+
+**For best performance on macOS, use native installation:**
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+python -m src.SolarSystem.Main
+```
+
+**If you still want to use Docker on macOS:**
+
 1. Install XQuartz: `brew install --cask xquartz`
 2. Start XQuartz application (via Spotlight or Applications folder)
 3. In XQuartz Preferences → Security, enable "Allow connections from network clients"
 4. Restart XQuartz for the changes to take effect
-5. Open a terminal and allow X11 connections:
+5. Open a terminal and set up X11 access:
    ```bash
-   xhost +
+   export DISPLAY=:0
+   xhost +localhost
    ```
-   **Note:** If `xhost` shows "unable to open display", XQuartz is not running yet. Make sure you see the XQuartz icon in your menu bar.
+   **Note:** You should see "localhost being added to access control list"
 
-6. Start the application using the macOS-specific compose file:
+6. Rebuild the Docker image (required for Mesa support):
+   ```bash
+   docker-compose -f docker-compose.mac.yml build
+   ```
+
+7. Start the application using the macOS-specific compose file:
    ```bash
    docker-compose -f docker-compose.mac.yml up
    ```
 
-   Alternatively, set DISPLAY manually with the regular compose file:
-   ```bash
-   DISPLAY=host.docker.internal:0 docker-compose up
-   ```
+   **Performance Note:** The Docker version uses software rendering (Mesa/llvmpipe) which is slower than native installation but works with XQuartz's limited OpenGL support.
 
 **Windows:**
 1. Install VcXsrv or Xming
@@ -129,9 +144,51 @@ For macOS and Windows users, you'll need to set up an X11 server:
 
 ### Troubleshooting Docker
 
+**Linux Issues:**
 - **Black screen or no display**: Ensure `xhost +local:docker` was run before starting
 - **Permission denied errors**: Check X11 socket permissions in `/tmp/.X11-unix`
 - **Application crashes on startup**: Verify all model files are present in the `models/` directory
+
+**macOS XQuartz Issues:**
+
+If you see "Could not find a usable pixel format" or "Unable to detect OpenGL version":
+- This means the Docker image needs to be rebuilt with Mesa support
+- Run: `docker-compose -f docker-compose.mac.yml build --no-cache`
+- Then try starting again: `docker-compose -f docker-compose.mac.yml up`
+- Note: This will use software rendering which is slower. Consider using native installation instead.
+
+If you see "Authorization required, but no authorization protocol specified":
+
+1. **Completely quit XQuartz** (Cmd+Q or XQuartz menu → Quit)
+2. **Open XQuartz Preferences** and verify:
+   - Go to Security tab
+   - Check "Allow connections from network clients"
+   - Close Preferences
+3. **Restart XQuartz** for changes to take effect:
+   ```bash
+   open -a XQuartz
+   ```
+4. **Wait for XQuartz to fully start** (icon appears in menu bar)
+5. **In your terminal, set DISPLAY and allow connections**:
+   ```bash
+   export DISPLAY=:0
+   xhost +localhost
+   ```
+   Note: You should see "localhost being added to access control list"
+6. **Now run Docker Compose**:
+   ```bash
+   docker-compose -f docker-compose.mac.yml up
+   ```
+
+If `xhost` shows "unable to open display":
+- XQuartz is not running or not fully started yet
+- Make sure you can see the XQuartz icon in your menu bar
+- Try setting `DISPLAY=:0` before running `xhost`
+
+Common mistakes:
+- Running `xhost +` without setting `DISPLAY=:0` first (this causes "unable to open display")
+- Not restarting XQuartz after enabling "Allow connections from network clients"
+- Setting `DISPLAY=host.docker.internal:0` in the terminal before running xhost (this is for Docker, not for your local xhost command)
 
 ## Usage
 
