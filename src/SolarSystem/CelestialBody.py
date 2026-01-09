@@ -1,241 +1,350 @@
-class CelestialBody(object):
-    def __init__(self, sizescale, orbitscale, yearscale, dayscale):
+"""
+CelestialBody module for SolarSystem application.
+Handles loading and animating all planets and celestial objects.
+"""
+
+import sys
+
+try:
+    from .constants import (
+        MODELS_PATH, PLANET_MODEL, PLANETS, SIZE_SCALE, ORBIT_SCALE,
+        YEAR_SCALE, DAY_SCALE
+    )
+except ImportError:
+    from constants import (
+        MODELS_PATH, PLANET_MODEL, PLANETS, SIZE_SCALE, ORBIT_SCALE,
+        YEAR_SCALE, DAY_SCALE
+    )
+
+
+class Planet:
+    """
+    Represents a single planet or celestial body.
+
+    Handles loading the model, texture, and creating rotation animations.
+    """
+
+    def __init__(self, name, config, sizescale, orbitscale, yearscale, dayscale, parent_node=None):
+        """
+        Initialize a planet.
+
+        Args:
+            name: Planet name (e.g., "earth", "mars")
+            config: Dictionary with planet configuration from constants
+            sizescale: Size scaling factor
+            orbitscale: Orbit distance scaling factor
+            yearscale: Year duration scaling factor
+            dayscale: Day duration scaling factor
+            parent_node: Parent node for orbit (None for sun, render for most planets)
+        """
+        self.name = name
+        self.config = config
+        self.sizescale = sizescale
+        self.orbitscale = orbitscale
+        self.yearscale = yearscale
+        self.dayscale = dayscale
+        self.parent_node = parent_node
+
+        # Will be set after loading
+        self.model = None
+        self.texture = None
+        self.orbit_root = None
+        self.day_interval = None
+        self.orbit_interval = None
+
+    def load(self):
+        """Load the planet model and texture."""
+        model_path = f"{MODELS_PATH}{PLANET_MODEL}"
+        texture_path = f"{MODELS_PATH}{self.config['texture']}"
+
+        try:
+            self.model = loader.loadModel(model_path)
+        except Exception as e:
+            print(f"Error: Could not load model for {self.name}: {e}")
+            sys.exit(1)
+
+        try:
+            self.texture = loader.loadTexture(texture_path)
+        except Exception as e:
+            print(f"Error: Could not load texture for {self.name}: {e}")
+            sys.exit(1)
+
+        self.model.setTexture(self.texture, 1)
+
+        # Set size
+        size = self.config["size_scale"] * self.sizescale
+        self.model.setScale(size)
+
+        # Set up orbit if this planet has one
+        if self.config.get("has_orbit", True) and self.config["orbit_au"] > 0:
+            self._setup_orbit()
+        else:
+            # No orbit (e.g., sun) - attach directly to render
+            self.model.reparentTo(render)
+
+    def _setup_orbit(self):
+        """Set up the orbital node and position."""
+        if self.parent_node is None:
+            self.parent_node = render
+
+        # Create orbit root node
+        orbit_node_name = f"orbit_root_{self.name}"
+        self.orbit_root = self.parent_node.attachNewNode(orbit_node_name)
+
+        # Attach planet to orbit root
+        self.model.reparentTo(self.orbit_root)
+
+        # Set orbital distance
+        orbit_distance = self.config["orbit_au"] * self.orbitscale
+        self.model.setPos(orbit_distance, 0, 0)
+
+    def create_animations(self):
+        """Create rotation and orbit animations."""
+        animations = {}
+
+        # Day rotation (all bodies rotate)
+        if self.name == "sun":
+            # Sun has special rotation timing
+            day_period = self.config["day_factor"]
+        else:
+            day_period = self.config["day_factor"] * self.dayscale
+
+        self.day_interval = self.model.hprInterval(day_period, (360, 0, 0))
+        self.day_interval.loop()
+        animations[f"{self.name}Day"] = self.day_interval
+
+        # Orbit animation (if has orbit)
+        if self.orbit_root is not None:
+            orbit_period = self.config["year_factor"] * self.yearscale
+            self.orbit_interval = self.orbit_root.hprInterval(orbit_period, (360, 0, 0))
+            self.orbit_interval.loop()
+            animations[f"{self.name}Orbit"] = self.orbit_interval
+
+        return animations
+
+    def get_orbit_root(self):
+        """Get the orbit root node (for attaching child objects like moons)."""
+        return self.orbit_root
+
+
+class CelestialBody:
+    """
+    Manager class for all celestial bodies in the solar system.
+
+    Handles loading and rotating all planets using the Planet class.
+    """
+
+    def __init__(self, sizescale=SIZE_SCALE, orbitscale=ORBIT_SCALE,
+                 yearscale=YEAR_SCALE, dayscale=DAY_SCALE):
+        """
+        Initialize the celestial body manager.
+
+        Args:
+            sizescale: Size scaling factor (default from constants)
+            orbitscale: Orbit distance scaling factor (default from constants)
+            yearscale: Year duration in seconds (default from constants)
+            dayscale: Day duration scaling factor (default from constants)
+        """
         self.sizescale = sizescale
         self.orbitscale = orbitscale
         self.dayscale = dayscale
         self.yearscale = yearscale
 
-        self.cbAtt = []
-        self.cbAttDic = {}
-        self.cbAttTex = {}
-        self.specialSun = 0
+        # Storage for animations and textures
+        self.cbAtt = []  # List of all animation intervals
+        self.cbAttDic = {}  # Dictionary: animation_name -> interval
+        self.cbAttTex = {}  # Dictionary: planet_name -> model/texture
+
+        # Planet objects
+        self.planets = {}
+        self.specialSun = None
 
     def loadAllCelestialBodys(self):
-        self.loadSun()
-        self.loadMercury()
-        self.loadVenus()
-        self.loadEarth()
-        self.loadMoon()
-        self.loadMars()
-        self.loadJupiter()
+        """Load all celestial bodies defined in constants."""
+        # First pass: load all planets except moons
+        for planet_config in PLANETS:
+            if "parent" not in planet_config:
+                self._load_planet(planet_config)
+
+        # Second pass: load moons (which need parent references)
+        for planet_config in PLANETS:
+            if "parent" in planet_config:
+                self._load_moon(planet_config)
+
+    def _load_planet(self, config):
+        """
+        Load a single planet.
+
+        Args:
+            config: Planet configuration dictionary from constants
+        """
+        name = config["name"]
+
+        planet = Planet(
+            name=name,
+            config=config,
+            sizescale=self.sizescale,
+            orbitscale=self.orbitscale,
+            yearscale=self.yearscale,
+            dayscale=self.dayscale
+        )
+
+        planet.load()
+        self.planets[name] = planet
+
+        # Store texture and model references
+        self.cbAttTex[f"{name}Tex"] = planet.texture
+        self.cbAttTex[name] = planet.model
+
+        # Special reference for sun (used by particle effects)
+        if name == "sun":
+            self.specialSun = planet.model
+
+    def _load_moon(self, config):
+        """
+        Load a moon (requires parent planet to be loaded first).
+
+        Args:
+            config: Moon configuration dictionary from constants
+        """
+        name = config["name"]
+        parent_name = config["parent"]
+
+        if parent_name not in self.planets:
+            print(f"Error: Parent planet {parent_name} not found for moon {name}")
+            return
+
+        parent_planet = self.planets[parent_name]
+        parent_orbit = parent_planet.get_orbit_root()
+
+        # Create moon's orbit root attached to parent's orbit
+        moon_orbit_root = parent_orbit.attachNewNode(f"orbit_root_{name}")
+        moon_orbit_root.setPos(self.orbitscale, 0, 0)  # Position at parent's orbital distance
+
+        planet = Planet(
+            name=name,
+            config=config,
+            sizescale=self.sizescale,
+            orbitscale=self.orbitscale,
+            yearscale=self.yearscale,
+            dayscale=self.dayscale,
+            parent_node=moon_orbit_root
+        )
+
+        planet.load()
+        self.planets[name] = planet
+
+        # Store texture and model references
+        self.cbAttTex[f"{name}Tex"] = planet.texture
+        self.cbAttTex[name] = planet.model
 
     def rotateAllCelestialBodys(self):
-        self.rotateSun()
-        self.rotateMercury()
-        self.rotateVenus()
-        self.rotateEarth()
-        self.rotateMoon()
-        self.rotateMars()
-        self.rotateJupiter()
+        """Create and start animations for all celestial bodies."""
+        for name, planet in self.planets.items():
+            animations = planet.create_animations()
 
+            for anim_name, interval in animations.items():
+                self.cbAtt.append(interval)
+                self.cbAttDic[anim_name] = interval
+
+    # =========================================================================
+    # Legacy methods for backwards compatibility
+    # =========================================================================
 
     def loadSun(self):
-        # Hier wird die Form fuer die Sonne geladen
-        # In diesem Fall ist eine planet_sphere
-        self.sun = loader.loadModel("../../models/planet_sphere")
-        # Hier wird die Sonne ins Zentrum des SolarSystems platziert
-        self.sun.reparentTo(render)
-        # Hier wird der Sonne die gelbe Sonnen Textur geladen
-        self.sun_tex = loader.loadTexture("../../models/sun_1k_tex.jpg")
-        # Hier wird die Textur gesetzt
-        self.sun.setTexture(self.sun_tex, 1)
-        # Hier wird die Groesse des Himmelskoerper gesetzt
-        self.sun.setScale(2 * self.sizescale)
-
-        self.cbAttTex["sunTex"] = self.sun_tex
-        self.cbAttTex["sun"] = self.sun
-        self.specialSun = self.sun
-    # end loadSun
-
-    def rotateSun(self):
-        # rotatePlanets creates intervals to actually use the hierarchy we created
-        # to turn the sun, planets, and moon to give a rough representation of the
-        # solar system. The next lesson will go into more depth on intervals.
-        self.day_period_sun = self.sun.hprInterval(20, (360, 0, 0))
-        self.day_period_sun.loop()
-        self.cbAtt.append(self.day_period_sun)
-        self.cbAttDic["sunDay"] = self.day_period_sun
-    # end rotateSun
+        """Legacy method: Load the sun."""
+        config = next((p for p in PLANETS if p["name"] == "sun"), None)
+        if config:
+            self._load_planet(config)
 
     def loadEarth(self):
-        #Hier wird die Erde an die Sonne/render (den Mittelpunkt) angehaengt
-        self.orbit_root_earth = render.attachNewNode('orbit_root_earth')
-        # Load earth
-        self.earth = loader.loadModel("../../models/planet_sphere")
-        self.earth_tex = loader.loadTexture("../../models/earth_1k_tex.jpg")
-        self.earth.setTexture(self.earth_tex, 1)
-        self.earth.reparentTo(self.orbit_root_earth)
-        self.earth.setScale(self.sizescale)
-        self.earth.setPos(self.orbitscale, 0, 0)
-
-        self.cbAttTex["earthTex"] = self.earth_tex
-        self.cbAttTex["earth"] = self.earth
-    # end loadEarth
-
-    def rotateEarth(self):
-        # earth
-        self.orbit_period_earth = self.orbit_root_earth.hprInterval(
-            self.yearscale, (360, 0, 0))
-        self.day_period_earth = self.earth.hprInterval(
-            self.dayscale, (360, 0, 0))
-
-        self.orbit_period_earth.loop()
-        self.day_period_earth.loop()
-
-        self.cbAtt.append(self.orbit_period_earth)
-        self.cbAtt.append(self.day_period_earth)
-
-        self.cbAttDic["earthDay"] = self.day_period_earth
-        self.cbAttDic["earthOrbit"] = self.orbit_period_earth
+        """Legacy method: Load Earth."""
+        config = next((p for p in PLANETS if p["name"] == "earth"), None)
+        if config:
+            self._load_planet(config)
 
     def loadMoon(self):
-        # Hier wird der Mond an die Erde gehaengt
-        self.orbit_root_moon = (
-            self.orbit_root_earth.attachNewNode('orbit_root_moon'))
-
-        # The center of the moon's orbit is exactly the same distance away from
-        # The sun as the Earth's distance from the sun
-        self.orbit_root_moon.setPos(self.orbitscale, 0, 0)
-
-        # Load the moon
-        self.moon = loader.loadModel("../../models/planet_sphere")
-        self.moon_tex = loader.loadTexture("../../models/moon_1k_tex.jpg")
-        self.moon.setTexture(self.moon_tex, 1)
-        self.moon.reparentTo(self.orbit_root_moon)
-        self.moon.setScale(0.1 * self.sizescale)
-        self.moon.setPos(0.1 * self.orbitscale, 0, 0)
-
-        self.cbAttTex["moonTex"] = self.moon_tex
-        self.cbAttTex["moon"] = self.moon
-
-    def rotateMoon(self):
-        # moon
-        self.orbit_period_moon = self.orbit_root_moon.hprInterval(
-            (.0749 * self.yearscale), (360, 0, 0))
-        self.day_period_moon = self.moon.hprInterval(
-            (.0749 * self.yearscale), (360, 0, 0))
-
-        self.orbit_period_moon.loop()
-        self.day_period_moon.loop()
-
-        self.cbAtt.append(self.orbit_period_moon)
-        self.cbAtt.append(self.day_period_moon)
-
-        self.cbAttDic["moonDay"] = self.day_period_moon
-        self.cbAttDic["moonOrbit"] = self.orbit_period_moon
+        """Legacy method: Load the Moon."""
+        config = next((p for p in PLANETS if p["name"] == "moon"), None)
+        if config:
+            self._load_moon(config)
 
     def loadMars(self):
-        self.orbit_root_mars = render.attachNewNode("orbit_root_mars")
-
-        # Load Mars
-        self.mars = loader.loadModel("../../models/planet_sphere")
-        self.mars_tex = loader.loadTexture("../../models/mars_1k_tex.jpg")
-        self.mars.setTexture(self.mars_tex, 1)
-        self.mars.reparentTo(self.orbit_root_mars)
-        self.mars.setPos(1.52 * self.orbitscale, 0, 0)
-        self.mars.setScale(0.515 * self.sizescale)
-
-        self.cbAttTex["marsTex"] = self.mars_tex
-        self.cbAttTex["mars"] = self.mars
-
-    def rotateMars(self):
-        self.orbit_period_mars = self.orbit_root_mars.hprInterval(
-            (1.881 * self.yearscale), (360, 0, 0))
-        self.day_period_mars = self.mars.hprInterval(
-            (1.03 * self.dayscale), (360, 0, 0))
-
-        self.orbit_period_mars.loop()
-        self.day_period_mars.loop()
-
-        self.cbAtt.append(self.orbit_period_mars)
-        self.cbAtt.append(self.day_period_mars)
-
-        self.cbAttDic["marsDay"] = self.day_period_mars
-        self.cbAttDic["marsOrbit"] = self.orbit_period_mars
+        """Legacy method: Load Mars."""
+        config = next((p for p in PLANETS if p["name"] == "mars"), None)
+        if config:
+            self._load_planet(config)
 
     def loadMercury(self):
-        self.orbit_root_mercury = render.attachNewNode('orbit_root_mercury')
-        # Load mercury
-        self.mercury = loader.loadModel("../../models/planet_sphere")
-        self.mercury_tex = loader.loadTexture("../../models/mercury_1k_tex.jpg")
-        self.mercury.setTexture(self.mercury_tex, 1)
-        self.mercury.reparentTo(self.orbit_root_mercury)
-        self.mercury.setPos(0.38 * self.orbitscale, 0, 0)
-        self.mercury.setScale(0.385 * self.sizescale)
-
-        self.cbAttTex["mercuryTex"] = self.mercury_tex
-        self.cbAttTex["mercury"] = self.mercury
-
-    def rotateMercury(self):
-        self.orbit_period_mercury = self.orbit_root_mercury.hprInterval(
-            (0.241 * self.yearscale), (360, 0, 0))
-        self.day_period_mercury = self.mercury.hprInterval(
-            (59 * self.dayscale), (360, 0, 0))
-
-        self.orbit_period_mercury.loop()
-        self.day_period_mercury.loop()
-
-        self.cbAtt.append(self.orbit_period_mercury)
-        self.cbAtt.append(self.day_period_mercury)
-
-        self.cbAttDic["mercuryDay"] = self.day_period_mercury
-        self.cbAttDic["mercuryOrbit"] = self.orbit_period_mercury
+        """Legacy method: Load Mercury."""
+        config = next((p for p in PLANETS if p["name"] == "mercury"), None)
+        if config:
+            self._load_planet(config)
 
     def loadVenus(self):
-        self.orbit_root_venus = render.attachNewNode('orbit_root_venus')
-
-        # Load Venus
-        self.venus = loader.loadModel("../../models/planet_sphere")
-        self.venus_tex = loader.loadTexture("../../models/venus_1k_tex.jpg")
-        self.venus.setTexture(self.venus_tex, 1)
-        self.venus.reparentTo(self.orbit_root_venus)
-        self.venus.setPos(0.72 * self.orbitscale, 0, 0)
-        self.venus.setScale(0.923 * self.sizescale)
-
-        self.cbAttTex["venusTex"] = self.venus_tex
-        self.cbAttTex["venus"] = self.venus
-
-    def rotateVenus(self):
-        self.orbit_period_venus = self.orbit_root_venus.hprInterval(
-            (0.615 * self.yearscale), (360, 0, 0))
-        self.day_period_venus = self.venus.hprInterval(
-            (243 * self.dayscale), (360, 0, 0))
-
-        self.orbit_period_venus.loop()
-        self.day_period_venus.loop()
-
-        self.cbAtt.append(self.orbit_period_venus)
-        self.cbAtt.append(self.day_period_venus)
-
-        self.cbAttDic["venusDay"] = self.day_period_venus
-        self.cbAttDic["venusOrbit"] = self.orbit_period_venus
+        """Legacy method: Load Venus."""
+        config = next((p for p in PLANETS if p["name"] == "venus"), None)
+        if config:
+            self._load_planet(config)
 
     def loadJupiter(self):
-        self.orbit_root_jupiter = render.attachNewNode('orbit_root_jupiter')
+        """Legacy method: Load Jupiter."""
+        config = next((p for p in PLANETS if p["name"] == "jupiter"), None)
+        if config:
+            self._load_planet(config)
 
-        # Load jupiter
-        self.jupiter = loader.loadModel("../../models/planet_sphere")
-        self.jupiter_tex = loader.loadTexture("../../models/jupiter.jpg")
-        self.jupiter.setTexture(self.jupiter_tex, 1)
-        self.jupiter.reparentTo(self.orbit_root_jupiter)
-        self.jupiter.setPos(2 * self.orbitscale, 0, 0)
-        self.jupiter.setScale(0.923 * self.sizescale)
+    def rotateSun(self):
+        """Legacy method: Create sun rotation animation."""
+        if "sun" in self.planets:
+            animations = self.planets["sun"].create_animations()
+            for anim_name, interval in animations.items():
+                self.cbAtt.append(interval)
+                self.cbAttDic[anim_name] = interval
 
-        self.cbAttTex["jupiterTex"] = self.jupiter_tex
-        self.cbAttTex["jupiter"] = self.jupiter
+    def rotateEarth(self):
+        """Legacy method: Create Earth rotation animation."""
+        if "earth" in self.planets:
+            animations = self.planets["earth"].create_animations()
+            for anim_name, interval in animations.items():
+                self.cbAtt.append(interval)
+                self.cbAttDic[anim_name] = interval
+
+    def rotateMoon(self):
+        """Legacy method: Create Moon rotation animation."""
+        if "moon" in self.planets:
+            animations = self.planets["moon"].create_animations()
+            for anim_name, interval in animations.items():
+                self.cbAtt.append(interval)
+                self.cbAttDic[anim_name] = interval
+
+    def rotateMars(self):
+        """Legacy method: Create Mars rotation animation."""
+        if "mars" in self.planets:
+            animations = self.planets["mars"].create_animations()
+            for anim_name, interval in animations.items():
+                self.cbAtt.append(interval)
+                self.cbAttDic[anim_name] = interval
+
+    def rotateMercury(self):
+        """Legacy method: Create Mercury rotation animation."""
+        if "mercury" in self.planets:
+            animations = self.planets["mercury"].create_animations()
+            for anim_name, interval in animations.items():
+                self.cbAtt.append(interval)
+                self.cbAttDic[anim_name] = interval
+
+    def rotateVenus(self):
+        """Legacy method: Create Venus rotation animation."""
+        if "venus" in self.planets:
+            animations = self.planets["venus"].create_animations()
+            for anim_name, interval in animations.items():
+                self.cbAtt.append(interval)
+                self.cbAttDic[anim_name] = interval
 
     def rotateJupiter(self):
-        self.orbit_period_jupiter = self.orbit_root_jupiter.hprInterval(
-            (3 * self.yearscale), (360, 0, 0))
-        self.day_period_jupiter = self.jupiter.hprInterval(
-            (23 * self.dayscale), (360, 0, 0))
-
-        self.orbit_period_jupiter.loop()
-        self.day_period_jupiter.loop()
-
-
-        self.cbAtt.append(self.orbit_period_jupiter)
-        self.cbAtt.append(self.day_period_jupiter)
-
-        self.cbAttDic["jupiterDay"] = self.day_period_jupiter
-        self.cbAttDic["jupiterOrbit"] = self.orbit_period_jupiter
+        """Legacy method: Create Jupiter rotation animation."""
+        if "jupiter" in self.planets:
+            animations = self.planets["jupiter"].create_animations()
+            for anim_name, interval in animations.items():
+                self.cbAtt.append(interval)
+                self.cbAttDic[anim_name] = interval

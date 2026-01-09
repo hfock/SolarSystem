@@ -1,0 +1,3 @@
+"""
+SolarSystem source package.
+"""
