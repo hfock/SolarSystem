@@ -119,7 +119,13 @@ class ProceduralTextureGenerator:
         """Generate Earth-like terrestrial planet texture"""
         img = self._create_pnm_image()
 
+        progress_interval = max(1, self.height // 10)  # Show progress every 10%
+
         for y in range(self.height):
+            if y % progress_interval == 0 and y > 0:
+                progress = int((y / self.height) * 100)
+                print(f"  Progress: {progress}%")
+
             for x in range(self.width):
                 u = x / self.width
                 v = y / self.height
@@ -180,6 +186,7 @@ class ProceduralTextureGenerator:
 
                 img.set_xel(x, y, r, g, b)
 
+        print("  Progress: 100%")
         return self._convert_to_texture(img)
 
     def generate_gas_giant_texture(self, primary_color=(0.8, 0.6, 0.4),
@@ -188,7 +195,13 @@ class ProceduralTextureGenerator:
         """Generate Jupiter/Saturn-like gas giant texture with bands and storms"""
         img = self._create_pnm_image()
 
+        progress_interval = max(1, self.height // 10)  # Show progress every 10%
+
         for y in range(self.height):
+            if y % progress_interval == 0 and y > 0:
+                progress = int((y / self.height) * 100)
+                print(f"  Progress: {progress}%")
+
             for x in range(self.width):
                 u = x / self.width
                 v = y / self.height
@@ -240,6 +253,7 @@ class ProceduralTextureGenerator:
 
                 img.set_xel(x, y, r, g, b)
 
+        print("  Progress: 100%")
         return self._convert_to_texture(img)
 
     def generate_rocky_texture(self, base_color=(0.5, 0.4, 0.35),
@@ -247,7 +261,13 @@ class ProceduralTextureGenerator:
         """Generate Moon/Mercury-like rocky, cratered texture"""
         img = self._create_pnm_image()
 
+        progress_interval = max(1, self.height // 10)  # Show progress every 10%
+
         for y in range(self.height):
+            if y % progress_interval == 0 and y > 0:
+                progress = int((y / self.height) * 100)
+                print(f"  Progress: {progress}%")
+
             for x in range(self.width):
                 u = x / self.width
                 v = y / self.height
@@ -294,6 +314,7 @@ class ProceduralTextureGenerator:
 
                 img.set_xel(x, y, r, g, b)
 
+        print("  Progress: 100%")
         return self._convert_to_texture(img)
 
     def generate_ice_giant_texture(self, base_color=(0.3, 0.5, 0.7),
@@ -301,7 +322,13 @@ class ProceduralTextureGenerator:
         """Generate Uranus/Neptune-like ice giant texture"""
         img = self._create_pnm_image()
 
+        progress_interval = max(1, self.height // 10)  # Show progress every 10%
+
         for y in range(self.height):
+            if y % progress_interval == 0 and y > 0:
+                progress = int((y / self.height) * 100)
+                print(f"  Progress: {progress}%")
+
             for x in range(self.width):
                 u = x / self.width
                 v = y / self.height
@@ -337,13 +364,20 @@ class ProceduralTextureGenerator:
 
                 img.set_xel(x, y, r, g, b)
 
+        print("  Progress: 100%")
         return self._convert_to_texture(img)
 
     def generate_star_texture(self, base_color=(1.0, 0.9, 0.6)):
         """Generate Sun-like star texture with surface detail"""
         img = self._create_pnm_image()
 
+        progress_interval = max(1, self.height // 10)  # Show progress every 10%
+
         for y in range(self.height):
+            if y % progress_interval == 0 and y > 0:
+                progress = int((y / self.height) * 100)
+                print(f"  Progress: {progress}%")
+
             for x in range(self.width):
                 u = x / self.width
                 v = y / self.height
@@ -377,6 +411,7 @@ class ProceduralTextureGenerator:
 
                 img.set_xel(x, y, r, g, b)
 
+        print("  Progress: 100%")
         return self._convert_to_texture(img)
 
     def _convert_to_texture(self, pnm_image):

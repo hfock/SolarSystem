@@ -49,7 +49,7 @@ BACKGROUND_COLOR = (0, 0, 0)
 # PROCEDURAL TEXTURES
 # =============================================================================
 USE_PROCEDURAL_TEXTURES = True  # Enable procedurally generated textures
-PROCEDURAL_TEXTURE_RESOLUTION = 2048  # Resolution for generated textures (width)
+PROCEDURAL_TEXTURE_RESOLUTION = 512  # Resolution for generated textures (width, higher = slower)
 USE_ENHANCED_MATERIALS = True  # Enable enhanced materials and shaders
 
 # =============================================================================
