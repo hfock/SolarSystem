@@ -11,12 +11,14 @@ import sys
 try:
     from .constants import (
         MODELS_PATH, DEFAULT_TEXTURES, EASTER_EGG_TEXTURES,
-        UI_TEXT_SCALE, UI_TITLE_SCALE, UI_TEXT_COLOR, PLANET_NAMES
+        UI_TEXT_SCALE, UI_TITLE_SCALE, UI_TEXT_COLOR, PLANET_NAMES,
+        PLANET_ANIMATIONS
     )
 except ImportError:
     from constants import (
         MODELS_PATH, DEFAULT_TEXTURES, EASTER_EGG_TEXTURES,
-        UI_TEXT_SCALE, UI_TITLE_SCALE, UI_TEXT_COLOR, PLANET_NAMES
+        UI_TEXT_SCALE, UI_TITLE_SCALE, UI_TEXT_COLOR, PLANET_NAMES,
+        PLANET_ANIMATIONS
     )
 
 
@@ -29,18 +31,9 @@ class ActionHandler(DirectObject):
     - Speed control
     - Texture toggling
     - Planet visibility
-    """
 
-    # Animation keys for each planet (Day rotation, Orbit rotation)
-    PLANET_ANIMATIONS = {
-        "sun": ["sunDay"],
-        "mercury": ["mercuryDay", "mercuryOrbit"],
-        "venus": ["venusDay", "venusOrbit"],
-        "earth": ["earthDay", "earthOrbit"],
-        "moon": ["moonDay", "moonOrbit"],
-        "mars": ["marsDay", "marsOrbit"],
-        "jupiter": ["jupiterDay", "jupiterOrbit"],
-    }
+    Animation keys are auto-generated from constants.PLANET_ANIMATIONS
+    """
 
     def __init__(self, base, cbAttDic, cbAttTex):
         """
@@ -178,7 +171,7 @@ class ActionHandler(DirectObject):
         Args:
             rate: The play rate to set (1.0 = normal, 0 = stopped, negative = reverse)
         """
-        for planet, anim_keys in self.PLANET_ANIMATIONS.items():
+        for planet, anim_keys in PLANET_ANIMATIONS.items():
             for key in anim_keys:
                 if key in self.cbAttDic:
                     self.cbAttDic[key].setPlayRate(rate)
@@ -190,7 +183,7 @@ class ActionHandler(DirectObject):
         Args:
             delta: Amount to add to current play rate (positive or negative)
         """
-        for planet, anim_keys in self.PLANET_ANIMATIONS.items():
+        for planet, anim_keys in PLANET_ANIMATIONS.items():
             for key in anim_keys:
                 if key in self.cbAttDic:
                     current_rate = self.cbAttDic[key].getPlayRate()
@@ -251,13 +244,13 @@ class ActionHandler(DirectObject):
         """Toggle all planets' animation (pause/resume entire simulation)."""
         if self.simRunning:
             # Pause all running animations
-            for planet, anim_keys in self.PLANET_ANIMATIONS.items():
+            for planet, anim_keys in PLANET_ANIMATIONS.items():
                 day_key = anim_keys[0]  # Day rotation is always first
                 if day_key in self.cbAttDic and self.cbAttDic[day_key].isPlaying():
                     self._toggle_planet(planet, anim_keys)
         else:
             # Resume all paused animations
-            for planet, anim_keys in self.PLANET_ANIMATIONS.items():
+            for planet, anim_keys in PLANET_ANIMATIONS.items():
                 day_key = anim_keys[0]
                 if day_key in self.cbAttDic and not self.cbAttDic[day_key].isPlaying():
                     self._toggle_planet(planet, anim_keys)

@@ -22,6 +22,7 @@ class Planet:
     Represents a single planet or celestial body.
 
     Handles loading the model, texture, and creating rotation animations.
+    Supports custom properties for extensibility (e.g., custom_has_rings, custom_color).
     """
 
     def __init__(self, name, config, sizescale, orbitscale, yearscale, dayscale, parent_node=None):
@@ -51,6 +52,12 @@ class Planet:
         self.orbit_root = None
         self.day_interval = None
         self.orbit_interval = None
+
+        # Preserve custom properties for extensibility
+        # Any config key starting with "custom_" is stored as an attribute
+        for key, value in config.items():
+            if key.startswith("custom_"):
+                setattr(self, key, value)
 
     def load(self):
         """Load the planet model and texture."""
@@ -243,108 +250,6 @@ class CelestialBody:
         for name, planet in self.planets.items():
             animations = planet.create_animations()
 
-            for anim_name, interval in animations.items():
-                self.cbAtt.append(interval)
-                self.cbAttDic[anim_name] = interval
-
-    # =========================================================================
-    # Legacy methods for backwards compatibility
-    # =========================================================================
-
-    def loadSun(self):
-        """Legacy method: Load the sun."""
-        config = next((p for p in PLANETS if p["name"] == "sun"), None)
-        if config:
-            self._load_planet(config)
-
-    def loadEarth(self):
-        """Legacy method: Load Earth."""
-        config = next((p for p in PLANETS if p["name"] == "earth"), None)
-        if config:
-            self._load_planet(config)
-
-    def loadMoon(self):
-        """Legacy method: Load the Moon."""
-        config = next((p for p in PLANETS if p["name"] == "moon"), None)
-        if config:
-            self._load_moon(config)
-
-    def loadMars(self):
-        """Legacy method: Load Mars."""
-        config = next((p for p in PLANETS if p["name"] == "mars"), None)
-        if config:
-            self._load_planet(config)
-
-    def loadMercury(self):
-        """Legacy method: Load Mercury."""
-        config = next((p for p in PLANETS if p["name"] == "mercury"), None)
-        if config:
-            self._load_planet(config)
-
-    def loadVenus(self):
-        """Legacy method: Load Venus."""
-        config = next((p for p in PLANETS if p["name"] == "venus"), None)
-        if config:
-            self._load_planet(config)
-
-    def loadJupiter(self):
-        """Legacy method: Load Jupiter."""
-        config = next((p for p in PLANETS if p["name"] == "jupiter"), None)
-        if config:
-            self._load_planet(config)
-
-    def rotateSun(self):
-        """Legacy method: Create sun rotation animation."""
-        if "sun" in self.planets:
-            animations = self.planets["sun"].create_animations()
-            for anim_name, interval in animations.items():
-                self.cbAtt.append(interval)
-                self.cbAttDic[anim_name] = interval
-
-    def rotateEarth(self):
-        """Legacy method: Create Earth rotation animation."""
-        if "earth" in self.planets:
-            animations = self.planets["earth"].create_animations()
-            for anim_name, interval in animations.items():
-                self.cbAtt.append(interval)
-                self.cbAttDic[anim_name] = interval
-
-    def rotateMoon(self):
-        """Legacy method: Create Moon rotation animation."""
-        if "moon" in self.planets:
-            animations = self.planets["moon"].create_animations()
-            for anim_name, interval in animations.items():
-                self.cbAtt.append(interval)
-                self.cbAttDic[anim_name] = interval
-
-    def rotateMars(self):
-        """Legacy method: Create Mars rotation animation."""
-        if "mars" in self.planets:
-            animations = self.planets["mars"].create_animations()
-            for anim_name, interval in animations.items():
-                self.cbAtt.append(interval)
-                self.cbAttDic[anim_name] = interval
-
-    def rotateMercury(self):
-        """Legacy method: Create Mercury rotation animation."""
-        if "mercury" in self.planets:
-            animations = self.planets["mercury"].create_animations()
-            for anim_name, interval in animations.items():
-                self.cbAtt.append(interval)
-                self.cbAttDic[anim_name] = interval
-
-    def rotateVenus(self):
-        """Legacy method: Create Venus rotation animation."""
-        if "venus" in self.planets:
-            animations = self.planets["venus"].create_animations()
-            for anim_name, interval in animations.items():
-                self.cbAtt.append(interval)
-                self.cbAttDic[anim_name] = interval
-
-    def rotateJupiter(self):
-        """Legacy method: Create Jupiter rotation animation."""
-        if "jupiter" in self.planets:
-            animations = self.planets["jupiter"].create_animations()
             for anim_name, interval in animations.items():
                 self.cbAtt.append(interval)
                 self.cbAttDic[anim_name] = interval
