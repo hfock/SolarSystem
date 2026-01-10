@@ -55,13 +55,63 @@ STARS_TEXTURE = "stars_1k_tex.jpg"
 PARTICLE_CONFIG = "fireish.ptf"
 
 # =============================================================================
-# PLANET DATA
-# Planet configuration: (name, orbit_au, size_scale, year_factor, day_factor, texture)
-# orbit_au: Orbital distance in Astronomical Units (Earth = 1.0)
-# size_scale: Relative size (Earth = 1.0)
-# year_factor: Orbital period relative to Earth year
-# day_factor: Rotation period in Earth days
+# PLANET DATA - Easily Expandable Architecture
 # =============================================================================
+#
+# To add a new celestial body, simply add a dictionary to the PLANETS list below.
+# The architecture automatically handles:
+#   - Planet name registration
+#   - Animation key generation
+#   - Texture mapping
+#   - Validation
+#
+# REQUIRED FIELDS:
+#   name:         Unique identifier (string)
+#   orbit_au:     Orbital distance in AU (0 for sun, relative to parent for moons)
+#   size_scale:   Relative size (Earth = 1.0, must be > 0)
+#   year_factor:  Orbital period relative to Earth year
+#   day_factor:   Rotation period (Earth days, or seconds for sun)
+#   texture:      Texture filename in models/ directory (.jpg, .png, .jpeg)
+#   has_orbit:    Whether this body orbits (boolean)
+#
+# OPTIONAL FIELDS:
+#   parent:       Parent body name for moons (must be defined earlier in list)
+#   moons:        List of moon names (for documentation/future use)
+#   custom_*:     Any custom properties for extensions (e.g., custom_color, custom_rings)
+#
+# EXAMPLE - Adding Saturn with rings and multiple moons:
+# {
+#     "name": "saturn",
+#     "orbit_au": 9.54,
+#     "size_scale": 9.14,
+#     "year_factor": 29.46,
+#     "day_factor": 0.44,
+#     "texture": "saturn_1k_tex.jpg",
+#     "has_orbit": True,
+#     "moons": ["titan", "enceladus"],  # Documentation
+#     "custom_has_rings": True,          # Custom property for future extension
+# },
+# {
+#     "name": "titan",
+#     "orbit_au": 0.2,  # Relative to Saturn
+#     "size_scale": 0.4,
+#     "year_factor": 0.044,
+#     "day_factor": 0.044,  # Tidally locked
+#     "texture": "titan_1k_tex.jpg",
+#     "has_orbit": True,
+#     "parent": "saturn",  # Must be defined after Saturn
+# },
+#
+# The system automatically:
+#   ✓ Validates all required fields on startup
+#   ✓ Generates animation keys (saturnDay, saturnOrbit, titanDay, titanOrbit)
+#   ✓ Adds to PLANET_NAMES list
+#   ✓ Creates DEFAULT_TEXTURES mapping
+#   ✓ Handles parent-child relationships for moons
+#   ✓ Preserves custom_* properties for extensions
+#
+# =============================================================================
+
 PLANETS = [
     {
         "name": "sun",
@@ -129,8 +179,34 @@ PLANETS = [
     },
 ]
 
-# List of planet names for iteration (excludes sun)
-PLANET_NAMES = ["sun", "mercury", "venus", "earth", "moon", "mars", "jupiter"]
+# =============================================================================
+# AUTO-GENERATED DATA STRUCTURES
+# These are derived from PLANETS list - DO NOT EDIT MANUALLY
+# =============================================================================
+
+def _generate_planet_names():
+    """Auto-generate list of planet names from PLANETS configuration."""
+    return [planet["name"] for planet in PLANETS]
+
+def _generate_default_textures():
+    """Auto-generate default texture mapping from PLANETS configuration."""
+    return {planet["name"]: planet["texture"] for planet in PLANETS}
+
+def _generate_planet_animations():
+    """Auto-generate animation key mappings for each planet."""
+    animations = {}
+    for planet in PLANETS:
+        name = planet["name"]
+        keys = [f"{name}Day"]  # All bodies have day rotation
+        if planet.get("has_orbit", True) and planet.get("orbit_au", 0) > 0:
+            keys.append(f"{name}Orbit")  # Add orbit if applicable
+        animations[name] = keys
+    return animations
+
+# Auto-generated from PLANETS list
+PLANET_NAMES = _generate_planet_names()
+DEFAULT_TEXTURES = _generate_default_textures()
+PLANET_ANIMATIONS = _generate_planet_animations()
 
 # Easter egg textures
 EASTER_EGG_TEXTURES = {
@@ -142,16 +218,67 @@ EASTER_EGG_TEXTURES = {
     "borko": "borko.jpg",
 }
 
-# Default textures for each planet (for reset)
-DEFAULT_TEXTURES = {
-    "sun": "sun_1k_tex.jpg",
-    "earth": "earth_1k_tex.jpg",
-    "moon": "moon_1k_tex.jpg",
-    "mars": "mars_1k_tex.jpg",
-    "mercury": "mercury_1k_tex.jpg",
-    "venus": "venus_1k_tex.jpg",
-    "jupiter": "jupiter.jpg",
-}
+# =============================================================================
+# CONFIGURATION VALIDATION
+# =============================================================================
+
+def validate_planet_configuration():
+    """
+    Validate the PLANETS configuration for consistency and completeness.
+
+    Raises:
+        ValueError: If configuration is invalid
+    """
+    required_fields = ["name", "orbit_au", "size_scale", "year_factor",
+                      "day_factor", "texture", "has_orbit"]
+    planet_names = set()
+
+    for i, planet in enumerate(PLANETS):
+        # Check required fields
+        for field in required_fields:
+            if field not in planet:
+                raise ValueError(
+                    f"Planet at index {i} missing required field '{field}': {planet}"
+                )
+
+        # Check for duplicate names
+        name = planet["name"]
+        if name in planet_names:
+            raise ValueError(f"Duplicate planet name found: '{name}'")
+        planet_names.add(name)
+
+        # Validate parent references for moons
+        if "parent" in planet:
+            parent = planet["parent"]
+            if parent not in planet_names:
+                raise ValueError(
+                    f"Planet '{name}' has parent '{parent}' which is not defined "
+                    f"or appears later in PLANETS list. Moons must be defined "
+                    f"after their parent planets."
+                )
+
+        # Validate numeric fields
+        if not isinstance(planet["size_scale"], (int, float)) or planet["size_scale"] <= 0:
+            raise ValueError(f"Planet '{name}' has invalid size_scale: {planet['size_scale']}")
+
+        if not isinstance(planet["orbit_au"], (int, float)) or planet["orbit_au"] < 0:
+            raise ValueError(f"Planet '{name}' has invalid orbit_au: {planet['orbit_au']}")
+
+        # Validate texture file extension
+        if not planet["texture"].lower().endswith(('.jpg', '.png', '.jpeg')):
+            raise ValueError(
+                f"Planet '{name}' has texture without image extension: {planet['texture']}"
+            )
+
+    return True
+
+# Validate configuration on module import
+try:
+    validate_planet_configuration()
+except ValueError as e:
+    print(f"CONFIGURATION ERROR: {e}")
+    import sys
+    sys.exit(1)
 
 # =============================================================================
 # UI SETTINGS
