@@ -3,7 +3,7 @@
 Main entry point for the SolarSystem application.
 A 3D interactive solar system simulator using Panda3D.
 
-Authors: Fock & Polydor
+Authors: Fock
 """
 
 from direct.showbase.ShowBase import ShowBase

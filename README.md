@@ -412,7 +412,7 @@ DAY_SCALE = YEAR_SCALE / 365.0 * 5
 ## Documentation
 
 For detailed project documentation, design diagrams, and architecture information, please see the [docs/](docs/) directory:
-- **Complete Documentation**: `docs/Fock_Polydor_SolarSystem.pdf`
+- **Complete Documentation**: `docs/Fock_SolarSystem.pdf`
 - **UML Diagrams**: `docs/SolarSystemUML.png`
 - **Screenshots**: `docs/SolarSystem.png`
 
@@ -432,5 +432,5 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for de
 
 ---
 
-**Fock & Polydor - SolarSystem**
+**Fock - SolarSystem**
 An educational 3D solar system simulator
