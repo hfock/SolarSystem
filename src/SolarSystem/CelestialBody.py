@@ -8,13 +8,19 @@ import sys
 try:
     from .constants import (
         MODELS_PATH, PLANET_MODEL, PLANETS, SIZE_SCALE, ORBIT_SCALE,
-        YEAR_SCALE, DAY_SCALE
+        YEAR_SCALE, DAY_SCALE, USE_PROCEDURAL_TEXTURES,
+        PROCEDURAL_TEXTURE_RESOLUTION, USE_ENHANCED_MATERIALS
     )
+    from .ProceduralTextures import generate_texture_for_planet
+    from .EnhancedMaterials import apply_enhanced_material
 except ImportError:
     from constants import (
         MODELS_PATH, PLANET_MODEL, PLANETS, SIZE_SCALE, ORBIT_SCALE,
-        YEAR_SCALE, DAY_SCALE
+        YEAR_SCALE, DAY_SCALE, USE_PROCEDURAL_TEXTURES,
+        PROCEDURAL_TEXTURE_RESOLUTION, USE_ENHANCED_MATERIALS
     )
+    from ProceduralTextures import generate_texture_for_planet
+    from EnhancedMaterials import apply_enhanced_material
 
 
 class Planet:
@@ -70,17 +76,44 @@ class Planet:
             print(f"Error: Could not load model for {self.name}: {e}")
             sys.exit(1)
 
-        try:
-            self.texture = loader.loadTexture(texture_path)
-        except Exception as e:
-            print(f"Error: Could not load texture for {self.name}: {e}")
-            sys.exit(1)
+        # Load texture - either procedural or from file
+        use_procedural = USE_PROCEDURAL_TEXTURES and self.config.get("custom_use_procedural", True)
+
+        if use_procedural:
+            try:
+                print(f"Generating procedural texture for {self.name}...")
+                self.texture = generate_texture_for_planet(
+                    self.name,
+                    resolution=PROCEDURAL_TEXTURE_RESOLUTION,
+                    seed=self.config.get("custom_seed", None)
+                )
+            except Exception as e:
+                print(f"Warning: Failed to generate procedural texture for {self.name}: {e}")
+                print(f"Falling back to file texture: {texture_path}")
+                try:
+                    self.texture = loader.loadTexture(texture_path)
+                except Exception as e2:
+                    print(f"Error: Could not load fallback texture for {self.name}: {e2}")
+                    sys.exit(1)
+        else:
+            try:
+                self.texture = loader.loadTexture(texture_path)
+            except Exception as e:
+                print(f"Error: Could not load texture for {self.name}: {e}")
+                sys.exit(1)
 
         self.model.setTexture(self.texture, 1)
 
         # Set size
         size = self.config["size_scale"] * self.sizescale
         self.model.setScale(size)
+
+        # Apply enhanced materials if enabled
+        if USE_ENHANCED_MATERIALS:
+            try:
+                apply_enhanced_material(self.model, self.name, use_shader=True)
+            except Exception as e:
+                print(f"Warning: Could not apply enhanced materials to {self.name}: {e}")
 
         # Set up orbit if this planet has one
         if self.config.get("has_orbit", True) and self.config["orbit_au"] > 0:
