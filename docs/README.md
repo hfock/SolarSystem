@@ -5,8 +5,8 @@ This directory contains project documentation and design files for the SolarSyst
 ## Files
 
 ### Project Documentation
-- **Fock_Polydor_SolarSystem.pdf** - Complete project documentation in PDF format
-- **Fock_Polydor_SolarSystem.docx** - Editable project documentation in Word format
+- **Fock_SolarSystem.pdf** - Complete project documentation in PDF format
+- **Fock_SolarSystem.docx** - Editable project documentation in Word format
 
 ### Design Files
 - **SolarSystem.asta** - Astah UML design file (architecture diagrams)
@@ -33,7 +33,7 @@ For detailed information, please refer to the PDF documentation.
 ## Editing Documentation
 
 To modify the documentation:
-- Edit `Fock_Polydor_SolarSystem.docx` with Microsoft Word or compatible editor
+- Edit `Fock_SolarSystem.docx` with Microsoft Word or compatible editor
 - Export updated version as PDF to maintain consistency
 - Update UML diagrams using Astah UML
 - Update mockups using Balsamiq Mockups

@@ -105,7 +105,7 @@ class ActionHandler(DirectObject):
     def _display_title(self):
         """Display the application title."""
         self.title = OnscreenText(
-            text="Fock & Polydor - SolarSystem",
+            text="Fock - SolarSystem",
             parent=base.a2dBottomRight,
             align=TextNode.ARight,
             style=1,

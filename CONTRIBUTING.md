@@ -159,7 +159,7 @@ Before submitting a pull request:
 
 If you have questions about contributing, feel free to:
 - Open an issue for discussion
-- Contact the maintainers (Fock & Polydor)
+- Contact the maintainer (Fock)
 
 ## License
 

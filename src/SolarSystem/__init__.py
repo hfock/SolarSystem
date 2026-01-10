@@ -14,7 +14,7 @@ Or as a module:
 """
 
 __version__ = "1.0.0"
-__author__ = "Fock & Polydor"
+__author__ = "Fock"
 
 # Note: Imports are deferred to avoid import-time side effects with Panda3D
 # Use explicit imports when needed:
